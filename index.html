@@ -1,0 +1,1019 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculator</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700&family=Orbitron:wght@600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background-color: #1f0037;
+      color: #fff;
+      font-family: 'Cairo', sans-serif;
+      padding: 20px;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .logo {
+      font-size: 3rem;
+      color: #fff;
+      text-shadow: 0 0 10px #fff, 0 0 20px #7c3aed, 0 0 30px #7c3aed;
+    }
+    .neon-title {
+      font-size: 1.5rem;
+      color: #fff;
+      font-family: 'Orbitron', sans-serif;
+      text-shadow: 0 0 5px #fff, 0 0 15px #0ff;
+    }
+    .screen-container {
+      display: flex;
+      flex-direction: row-reverse;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .subtext {
+      font-size: 0.9rem;
+      color: #e0b3ff;
+      text-shadow: 0 0 5px #fff, 0 0 10px #0ff;
+    }
+    .main-container {
+      max-width: 1200px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+    .top-section {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+      width: 100%;
+    }
+    .we-prices {
+      max-width: 400px;
+      width: 100%;
+    }
+    .selected-packages {
+      max-width: 400px;
+      width: 100%;
+    }
+    .screen {
+      font-family: 'Orbitron', sans-serif;
+      background: linear-gradient(145deg, #111, #222);
+      color: #0ff;
+      font-size: 1.5rem;
+      padding: 15px;
+      border-radius: 10px;
+      border: 3px solid #0ff;
+      box-shadow: 0 0 20px #0ff, 0 0 40px #0ff, inset 0 0 10px #0ff;
+      text-shadow: 0 0 10px #0ff, 0 0 20px #0ff;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      width: 150px;
+      height: 150px;
+    }
+    .calculators {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      width: 100%;
+      max-width: 1200px;
+    }
+    .calculator-box {
+      background: linear-gradient(145deg, #111, #222);
+      padding: 10px;
+      border-radius: 6px;
+      border: 2px solid #0ff;
+      box-shadow: 0 0 10px #0ff;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    label {
+      font-size: 0.8rem;
+      color: #e0b3ff;
+      text-shadow: 0 0 5px #e0b3ff;
+    }
+    input[type="number"], input[type="password"], select {
+      padding: 6px;
+      font-size: 0.8rem;
+      border-radius: 4px;
+      border: none;
+      background: #222;
+      color: #fff;
+      box-shadow: 0 0 5px #0ff;
+      width: 100%;
+    }
+    .result {
+      font-size: 0.9rem;
+      color: #fff;
+      text-shadow: 0 0 5px #0ff;
+    }
+    .btn {
+      padding: 6px;
+      background-color: #7c3aed;
+      color: white;
+      font-size: 0.8rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      box-shadow: 0 0 10px #e0b3ff;
+      transition: 0.3s;
+    }
+    .btn:hover {
+      background-color: #a855f7;
+    }
+    .reset-container {
+      display: flex;
+      justify-content: flex-start;
+      margin-bottom: 10px;
+    }
+    .digit {
+      text-shadow: 0 0 5px #fff, 0 0 15px #fff;
+      padding: 5px 8px;
+      border-radius: 5px;
+      font-size: 1.5rem;
+      font-weight: bold;
+      animation: flicker 0.1s infinite;
+    }
+    @keyframes flicker {
+      0% { opacity: 1; }
+      50% { opacity: 0.8; }
+      100% { opacity: 1; }
+    }
+    .we-prices h2, .selected-packages h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.8rem;
+      color: #fff;
+      text-shadow: 0 0 5px #fff, 0 0 15px #0ff;
+      margin-bottom: 20px;
+    }
+    .dropdown-container {
+      position: relative;
+    }
+    .dropdown {
+      padding: 10px;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: none;
+      background: #222;
+      color: #fff;
+      width: 100%;
+      cursor: pointer;
+      box-shadow: 0 0 10px #0ff;
+    }
+    .dropdown option {
+      background: #1f0037;
+      color: #fff;
+    }
+    .price-list {
+      margin-top: 15px;
+      padding: 15px;
+      background: linear-gradient(145deg, #111, #222);
+      border-radius: 10px;
+      border: 2px solid #0ff;
+      box-shadow: 0 0 20px #0ff;
+      display: none;
+    }
+    .price-list.active {
+      display: block;
+    }
+    .price-list h3 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.3rem;
+      color: #0ff;
+      text-shadow: 0 0 5px #0ff;
+      margin-bottom: 10px;
+    }
+    .price-list ul {
+      list-style: none;
+      padding: 0;
+    }
+    .price-list li {
+      font-size: 0.9rem;
+      color: #fff;
+      margin-bottom: 8px;
+      text-shadow: 0 0 5px #fff;
+      display: flex;
+      flex-direction: column;
+    }
+    .price-list li input[type="checkbox"] {
+      margin-bottom: 5px;
+    }
+    .price-list li strong {
+      color: #e0b3ff;
+    }
+    .price-list .note {
+      font-size: 0.8rem;
+      color: #e0b3ff;
+      margin-top: 10px;
+      text-shadow: 0 0 5px #e0b3ff;
+    }
+    .selected-list {
+      margin-top: 15px;
+      padding: 10px;
+      background: #222;
+      border-radius: 6px;
+      box-shadow: 0 0 10px #0ff;
+      max-height: 300px;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+    }
+    .selected-list::-webkit-scrollbar {
+      width: 8px;
+    }
+    .selected-list::-webkit-scrollbar-track {
+      background: #0ff;
+      border-radius: 4px;
+    }
+    .selected-list::-webkit-scrollbar-thumb {
+      background: #e0b3ff;
+      border-radius: 4px;
+      box-shadow: 0 0 10px #e0b3ff;
+    }
+    .selected-list::-webkit-scrollbar-thumb:hover {
+      background: #a855f7;
+    }
+    .selected-list label {
+      display: block;
+      margin-bottom: 10px;
+    }
+    .selected-list .result {
+      font-size: 1rem;
+    }
+    .selected-list ul {
+      list-style: none;
+      padding: 0;
+    }
+    .selected-list li {
+      display: flex;
+      flex-direction: column;
+      padding: 8px;
+      background: #333;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      box-shadow: 0 0 5px #0ff;
+    }
+    .selected-list li button {
+      align-self: flex-end;
+      margin-top: 5px;
+    }
+    .control-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: #7c3aed;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 0 10px #e0b3ff, 0 0 20px #e0b3ff;
+      z-index: 1000;
+    }
+    .control-btn:hover {
+      background-color: #a855f7;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1001;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-content {
+      background: linear-gradient(145deg, #111, #222);
+      padding: 20px;
+      border-radius: 10px;
+      border: 3px solid #0ff;
+      box-shadow: 0 0 20px #0ff;
+      max-width: 400px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .modal-content h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.5rem;
+      color: #fff;
+      text-shadow: 0 0 5px #fff, 0 0 15px #0ff;
+      margin-bottom: 20px;
+    }
+    .close-btn {
+      float: left;
+      color: #fff;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+    .login-container, .panel-container {
+      width: 100%;
+    }
+    .panel-container {
+      display: none;
+    }
+    .section-list, .package-list {
+      margin-top: 15px;
+    }
+    .section-item, .package-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px;
+      background: #222;
+      border-radius: 6  box-shadow: 0 0 5px #0ff;
+    }
+    .package-item > div {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .error {
+      color: #f00;
+      text-shadow: 0 0 5px #f00;
+      margin: 10px 0;
+    }
+    .footer {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.9rem;
+      color: #0ff;
+      text-shadow: 0 0 5px #0ff, 0 0 10px #0ff, 0 0 20px #0ff;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 5px 10px;
+      border-radius: 5px;
+      animation: neonGlow 1.5s ease-in-out infinite alternate;
+    }
+    @keyframes neonGlow {
+      from {
+        text-shadow: 0 0 5px #0ff, 0 0 10px #0ff, 0 0 20px #0ff;
+        box-shadow: 0 0 5px #0ff, 0 0 10px #0ff;
+      }
+      to {
+        text-shadow: 0 0 10px #0ff, 0 0 20px #0ff, 0 0 30px #0ff;
+        box-shadow: 0 0 10px #0ff, 0 0 20px #0ff;
+      }
+    }
+    @media (max-width: 768px) {
+      .header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+      .screen-container {
+        flex-direction: column;
+        align-items: center;
+      }
+      .calculators {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo"><i class="fas fa-calculator"></i></div>
+    <div class="neon-title">Calculator</div>
+  </div>
+  <div class="main-container">
+    <div class="screen-container">
+      <div class="screen" id="screen" onclick="copyScreenResult()">READY</div>
+      <div class="subtext">Click On Screen To Copy Numbers</div>
+    </div>
+    <div class="top-section">
+      <div class="we-prices">
+        <h2>WE Prices 2025</h2>
+        <div class="dropdown-container">
+          <select id="weCategory" class="dropdown">
+            <option value="">Select Category</option>
+          </select>
+        </div>
+        <div id="priceLists"></div>
+      </div>
+      <div class="selected-packages">
+        <h2>Selected Packages</h2>
+        <div class="reset-container">
+          <button class="btn" onclick="resetFields()"><i class="fas fa-eraser"></i> Reset</button>
+        </div>
+        <div class="selected-list">
+          <ul id="selectedList"></ul>
+          <label><i class="fas fa-wallet"></i> رصيد العميل (بدون ضريبة):</label>
+          <input type="number" id="clientBalance" placeholder="أدخل الرصيد (EGP)">
+          <div class="result" id="totalBeforeTax"></div>
+          <div class="result" id="totalAfterTax"></div>
+          <div class="result" id="remainingBalance"></div>
+        </div>
+      </div>
+    </div>
+    <div class="calculators">
+      <div class="calculator-box">
+        <label><i class="fas fa-stopwatch"></i> Seconds:</label>
+        <input type="number" id="seconds" placeholder="Enter Seconds">
+        <div class="result" id="minutesResult"></div>
+      </div>
+      <div class="calculator-box">
+        <label><i class="fas fa-database"></i> Concession 015 (GB):</label>
+        <input type="number" id="concession" placeholder="Enter GB">
+        <div class="result" id="concessionResult"></div>
+      </div>
+      <div class="calculator-box">
+        <label><i class="fas fa-network-wired"></i> Remaining ADSL (Bytes):</label>
+        <input type="number" id="adsl" placeholder="Enter Bytes">
+        <div class="result" id="adslResult"></div>
+      </div>
+      <div class="calculator-box">
+        <label><i class="fas fa-compress-arrows-alt"></i> 015 Remaining /1024/1024:</label>
+        <input type="number" id="toMB" placeholder="Enter Bytes">
+        <div class="result" id="mbResult"></div>
+      </div>
+      <div class="calculator-box">
+        <label><i class="fas fa-video"></i> Video/IPTV Consumption:</label>
+        <select id="videoQuality">
+          <option value="0.3">240p (Low)</option>
+          <option value="0.5">360p</option>
+          <option value="0.7">480p (SD)</option>
+          <option value="1.5">720p (HD)</option>
+          <option value="3">1080p (Full HD)</option>
+          <option value="7">4K (Ultra HD)</option>
+        </select>
+        <input type="number" id="videoDuration" placeholder="Duration (Minutes)">
+        <div class="result" id="videoResult"></div>
+      </div>
+      <div class="calculator-box">
+        <label><i class="fas fa-phone"></i> App Calls Consumption:</label>
+        <select id="callType">
+          <option value="0.06">Voice Call</option>
+          <option value="0.3">Video Call (Low)</option>
+          <option value="0.7">Video Call (Medium)</option>
+          <option value="1.5">Video Call (High)</option>
+          <option value="0.1">WiFi Calling</option>
+        </select>
+        <input type="number" id="callDuration" placeholder="Duration (Minutes)">
+        <div class="result" id="callResult"></div>
+      </div>
+      <div class="calculator-box">
+        <label><i class="fas fa-money-bill-wave"></i> VAT 14% (EGP):</label>
+        <input type="number" id="vatAmount" placeholder="Enter Amount">
+        <div class="result" id="vatResult"></div>
+      </div>
+    </div>
+  </div>
+  <button class="control-btn" onclick="openControlPanel()"><i class="fas fa-lock"></i></button>
+  <div class="modal" id="controlModal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeControlPanel()">×</span>
+      <h2>Control Panel</h2>
+      <div class="login-container" id="loginContainer">
+        <input type="password" id="password" placeholder="Enter Password">
+        <button class="btn" onclick="login()"><i class="fas fa-sign-in-alt"></i> Login</button>
+        <div class="error" id="error"></div>
+      </div>
+      <div class="panel-container" id="panelContainer">
+        <div>
+          <h3>Add/Edit Section</h3>
+          <input type="text" id="sectionName" placeholder="Section Name (e.g., Mobile)">
+          <button class="btn" onclick="addSection()"><i class="fas fa-plus"></i> Add Section</button>
+          <div class="section-list" id="sectionList"></div>
+        </div>
+        <div>
+          <h3>Add/Edit Package/Device</h3>
+          <select id="packageSection">
+            <option value="">Select Section</option>
+          </select>
+          <input type="text" id="packageName" placeholder="Package/Device Name">
+          <input type="number" id="priceBeforeTax" placeholder="Price Before VAT (EGP)">
+          <button class="btn" onclick="addPackage()"><i class="fas fa-plus"></i> Add Package</button>
+          <div class="package-list" id="packageList"></div>
+        </div>
+        <div>
+          <h3>Export/Import Data</h3>
+          <button class="btn" onclick="exportData()"><i class="fas fa-download"></i> Export JSON</button>
+          <input type="file" id="importFile" accept=".json">
+          <button class="btn" onclick="importData()"><i class="fas fa-upload"></i> Import JSON</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer">Developed by Eslam ©</div>
+  <script>
+    // Initial Data
+    let data = {
+      sections: [
+        { id: "mobile", name: "Mobile Packages", packages: [
+          { id: "p1", name: "Super Kix 25", priceBeforeTax: 21.93, priceAfterTax: 25.00 },
+          { id: "p2", name: "Super Kix 35", priceBeforeTax: 30.70, priceAfterTax: 35.00 },
+          { id: "p3", name: "Super Kix 60", priceBeforeTax: 52.63, priceAfterTax: 60.00 }
+        ]},
+        { id: "internet", name: "Home Internet", packages: [
+          { id: "p4", name: "WE Space 140", priceBeforeTax: 209.65, priceAfterTax: 239.40 },
+          { id: "p5", name: "WE Space 200", priceBeforeTax: 289.47, priceAfterTax: 330.60 },
+          { id: "p6", name: "WE Space 250", priceBeforeTax: 359.65, priceAfterTax: 410.40 }
+        ]},
+        { id: "landline", name: "Landline Services", packages: [
+          { id: "p7", name: "WE Talk 15", priceBeforeTax: 13.16, priceAfterTax: 15.00 },
+          { id: "p8", name: "WE Talk 25", priceBeforeTax: 21.93, priceAfterTax: 25.00 },
+          { id: "p9", name: "WE Talk 40", priceBeforeTax: 35.09, priceAfterTax: 40.00 },
+          { id: "p10", name: "Installation Fee", priceBeforeTax: 178.42, priceAfterTax: 203.40 }
+        ]},
+        { id: "addons", name: "Add-On Services", packages: [
+          { id: "p11", name: "Extra Quota 10", priceBeforeTax: 8.77, priceAfterTax: 10.00 },
+          { id: "p12", name: "Extra Quota 20", priceBeforeTax: 17.54, priceAfterTax: 20.00 }
+        ]}
+      ]
+    };
+
+    // Control Panel
+    const correctPassword = "6514131";
+
+    function openControlPanel() {
+      document.getElementById("controlModal").style.display = "flex";
+      document.getElementById("password").focus();
+    }
+
+    function closeControlPanel() {
+      document.getElementById("controlModal").style.display = "none";
+      document.getElementById("loginContainer").style.display = "block";
+      document.getElementById("panelContainer").style.display = "none";
+      document.getElementById("password").value = "";
+      document.getElementById("error").textContent = "";
+    }
+
+    function login() {
+      const password = document.getElementById("password").value;
+      console.log("Input Password:", password);
+      if (!password) {
+        document.getElementById("error").textContent = "يرجى إدخال كلمة المرور";
+        return;
+      }
+      if (password === correctPassword) {
+        document.getElementById("loginContainer").style.display = "none";
+        document.getElementById("panelContainer").style.display = "block";
+        document.getElementById("error").textContent = "";
+        loadData();
+      } else {
+        document.getElementById("error").textContent = "كلمة المرور غير صحيحة";
+      }
+    }
+
+    function loadData() {
+      const storedData = localStorage.getItem("wePrices");
+      if (storedData) {
+        data = JSON.parse(storedData);
+      }
+      updateSectionList();
+      updatePackageSectionDropdown();
+      loadPrices();
+    }
+
+    function saveData() {
+      localStorage.setItem("wePrices", JSON.stringify(data));
+    }
+
+    function updateSectionList() {
+      const sectionList = document.getElementById("sectionList");
+      sectionList.innerHTML = "";
+      data.sections.forEach((section, index) => {
+        const div = document.createElement("div");
+        div.className = "section-item";
+        div.innerHTML = `
+          <span>${section.name}</span>
+          <div>
+            <button class="btn" onclick="editSection(${index})"><i class="fas fa-edit"></i></button>
+            <button class="btn" onclick="deleteSection(${index})"><i class="fas fa-trash"></i></button>
+          </div>
+        `;
+        sectionList.appendChild(div);
+      });
+    }
+
+    function updatePackageSectionDropdown() {
+      const dropdown = document.getElementById("packageSection");
+      dropdown.innerHTML = '<option value="">Select Section</option>';
+      data.sections.forEach(section => {
+        const option = document.createElement("option");
+        option.value = section.id;
+        option.textContent = section.name;
+        dropdown.appendChild(option);
+      });
+    }
+
+    function updatePackageList(sectionId) {
+      const packageList = document.getElementById("packageList");
+      packageList.innerHTML = "";
+      const section = data.sections.find(s => s.id === sectionId);
+      if (section) {
+        section.packages.forEach((pkg, index) => {
+          const div = document.createElement("div");
+          div.className = "package-item";
+          div.innerHTML = `
+            <div>
+              <strong>${pkg.name}</strong>
+              <span>Before VAT: ${pkg.priceBeforeTax} EGP</span>
+              <span>After VAT: ${pkg.priceAfterTax} EGP</span>
+            </div>
+            <div>
+              <button class="btn" onclick="editPackage('${sectionId}', ${index})"><i class="fas fa-edit"></i></button>
+              <button class="btn" onclick="deletePackage('${sectionId}', ${index})"><i class="fas fa-trash"></i></button>
+            </div>
+          `;
+          packageList.appendChild(div);
+        });
+      }
+    }
+
+    function addSection() {
+      const name = document.getElementById("sectionName").value;
+      if (name) {
+        data.sections.push({
+          id: `s${Date.now()}`,
+          name,
+          packages: []
+        });
+        saveData();
+        updateSectionList();
+        updatePackageSectionDropdown();
+        loadPrices();
+        document.getElementById("sectionName").value = "";
+      }
+    }
+
+    function editSection(index) {
+      const newName = prompt("أدخل اسم القسم الجديد:", data.sections[index].name);
+      if (newName) {
+        data.sections[index].name = newName;
+        saveData();
+        updateSectionList();
+        updatePackageSectionDropdown();
+        loadPrices();
+      }
+    }
+
+    function deleteSection(index) {
+      if (confirm("هل تريد حذف هذا القسم؟")) {
+        data.sections.splice(index, 1);
+        saveData();
+        updateSectionList();
+        updatePackageSectionDropdown();
+        loadPrices();
+      }
+    }
+
+    function addPackage() {
+      const sectionId = document.getElementById("packageSection").value;
+      const name = document.getElementById("packageName").value;
+      const priceBeforeTax = parseFloat(document.getElementById("priceBeforeTax").value);
+      if (sectionId && name && !isNaN(priceBeforeTax)) {
+        const section = data.sections.find(s => s.id === sectionId);
+        section.packages.push({
+          id: `p${Date.now()}`,
+          name,
+          priceBeforeTax,
+          priceAfterTax: (priceBeforeTax * 1.14).toFixed(2)
+        });
+        saveData();
+        updatePackageList(sectionId);
+        loadPrices();
+        document.getElementById("packageName").value = "";
+        document.getElementById("priceBeforeTax").value = "";
+      }
+    }
+
+    function editPackage(sectionId, index) {
+      const section = data.sections.find(s => s.id === sectionId);
+      const pkg = section.packages[index];
+      const newName = prompt("أدخل اسم الباقة/الجهاز الجديد:", pkg.name);
+      const newPrice = prompt("أدخل السعر قبل الضريبة (EGP):", pkg.priceBeforeTax);
+      if (newName && newPrice && !isNaN(newPrice)) {
+        section.packages[index].name = newName;
+        section.packages[index].priceBeforeTax = parseFloat(newPrice);
+        section.packages[index].priceAfterTax = (parseFloat(newPrice) * 1.14).toFixed(2);
+        saveData();
+        updatePackageList(sectionId);
+        loadPrices();
+      }
+    }
+
+    function deletePackage(sectionId, index) {
+      if (confirm("هل تريد حذف هذه الباقة/الجهاز؟")) {
+        const section = data.sections.find(s => s.id === sectionId);
+        section.packages.splice(index, 1);
+        saveData();
+        updatePackageList(sectionId);
+        loadPrices();
+      }
+    }
+
+    function exportData() {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "we_prices.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importData() {
+      const fileInput = document.getElementById("importFile");
+      const file = fileInput.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          try {
+            const importedData = JSON.parse(e.target.result);
+            data = importedData;
+            saveData();
+            updateSectionList();
+            updatePackageSectionDropdown();
+            loadPrices();
+            alert("تم استيراد البيانات بنجاح");
+          } catch (err) {
+            alert("خطأ في استيراد الملف");
+          }
+        };
+        reader.readAsText(file);
+      }
+    }
+
+    document.getElementById("packageSection").addEventListener("change", () => {
+      const sectionId = document.getElementById("packageSection").value;
+      updatePackageList(sectionId);
+    });
+
+    // Load JSON Data
+    async function initData() {
+      try {
+        const response = await fetch('we_prices.json');
+        if (response.ok) {
+          data = await response.json();
+          localStorage.setItem("wePrices", JSON.stringify(data));
+        }
+      } catch (err) {
+        console.log("Using default or stored data");
+      }
+      loadData();
+    }
+
+    // Calculator Functions
+    function resetFields() {
+      document.querySelectorAll('input').forEach(i => i.value = '');
+      document.querySelectorAll('.result').forEach(r => r.textContent = '');
+      document.getElementById('screen').textContent = 'READY';
+      document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+      updateSelectedPackages();
+    }
+
+    function copyScreenResult() {
+      const screenText = document.getElementById("screen").textContent;
+      const numbersOnly = screenText.replace(/[^0-9.,]/g, '').trim();
+      navigator.clipboard.writeText(numbersOnly);
+      alert('تم نسخ الأرقام فقط');
+    }
+
+    function showOnScreen(calcFn, inputId, resultId, transformFn, formatFn = null, showDecimal = false) {
+      const value = parseFloat(document.getElementById(inputId).value);
+      if (!isNaN(value)) {
+        const screen = document.getElementById('screen');
+        screen.innerHTML = '';
+        for (let i = 0; i < 6; i++) {
+          const digit = document.createElement('span');
+          digit.classList.add('digit');
+          digit.style.color = getRandomColor();
+          digit.textContent = Math.floor(Math.random() * 10);
+          screen.appendChild(digit);
+        }
+        setTimeout(() => {
+          const result = transformFn(value);
+          const displayResult = formatFn ? formatFn(result) : (showDecimal ? result.toFixed(4) : Math.floor(result).toString());
+          document.getElementById(resultId).innerHTML = displayResult;
+          screen.innerHTML = '<span class="digit" style="color:#0ff">' + displayResult + '</span>';
+        }, 3000);
+      }
+    }
+
+    function getRandomColor() {
+      const colors = ['#ff0', '#0ff', '#f0f', '#0f0', '#f00', '#00f'];
+      return colors[Math.floor(Math.random() * colors.length)];
+    }
+
+    // Seconds to Minutes and Seconds
+    document.getElementById('seconds').addEventListener('input', () => {
+      showOnScreen('minute', 'seconds', 'minutesResult', v => v, result => {
+        const minutes = Math.floor(result / 60);
+        const seconds = Math.floor(result % 60);
+        if (seconds === 0) {
+          return `${minutes} Minute${minutes !== 1 ? 's' : ''}`;
+        }
+        return `${minutes} Minute${minutes !== 1 ? 's' : ''}, ${seconds} Second${seconds !== 1 ? 's' : ''}`;
+      });
+    });
+
+    // Concession to Bytes
+    document.getElementById('concession').addEventListener('input', () => {
+      showOnScreen('byte', 'concession', 'concessionResult', v => v * 1024 * 1024 * 1024, result => Math.floor(result).toString() + ' Bytes');
+    });
+
+    // ADSL Bytes to MB and GB
+    document.getElementById('adsl').addEventListener('input', () => {
+      showOnScreen('gb', 'adsl', 'adslResult', v => v, result => {
+        const mb = result / 1024 / 1024;
+        const gb = result / 1024 / 1024 / 1024;
+        if (gb >= 1) {
+          return `${Math.floor(gb)} GB`;
+        } else {
+          return `${Math.floor(mb)} MB`;
+        }
+      });
+    });
+
+    // Bytes to MB
+    document.getElementById('toMB').addEventListener('input', () => {
+      showOnScreen('mb', 'toMB', 'mbResult', v => v / 1024 / 1024, result => Math.floor(result).toString() + ' Unit/MB');
+    });
+
+    // Video/IPTV Consumption
+    document.getElementById('videoDuration').addEventListener('input', () => {
+      const quality = parseFloat(document.getElementById('videoQuality').value);
+      const duration = parseFloat(document.getElementById('videoDuration').value);
+      if (!isNaN(duration)) {
+        showOnScreen('video', 'videoDuration', 'videoResult', () => {
+          const mbPerMinute = quality * 60;
+          const totalMB = mbPerMinute * duration;
+          return totalMB >= 1024 ? Math.floor(totalMB / 1024).toString() + ' GB' : Math.floor(totalMB).toString() + ' MB';
+        }, result => result);
+      }
+    });
+
+    // App Calls Consumption
+    document.getElementById('callDuration').addEventListener('input', () => {
+      const callType = parseFloat(document.getElementById('callType').value);
+      const duration = parseFloat(document.getElementById('callDuration').value);
+      if (!isNaN(duration)) {
+        showOnScreen('call', 'callDuration', 'callResult', () => {
+          const totalMB = callType * duration;
+          return totalMB >= 1024 ? Math.floor(totalMB / 1024).toString() + ' GB' : Math.floor(totalMB).toString() + ' MB';
+        }, result => result);
+      }
+    });
+
+    // VAT 14% Calculator
+    document.getElementById('vatAmount').addEventListener('input', () => {
+      showOnScreen('vat', 'vatAmount', 'vatResult', v => v * 1.14, result => result.toFixed(2) + ' EGP', true);
+    });
+
+    // Load WE Prices
+    function loadPrices() {
+      const categoryDropdown = document.getElementById("weCategory");
+      const priceLists = document.getElementById("priceLists");
+      categoryDropdown.innerHTML = '<option value="">Select Category</option>';
+      priceLists.innerHTML = "";
+      data.sections.forEach(section => {
+        const option = document.createElement("option");
+        option.value = section.id;
+        option.textContent = section.name;
+        categoryDropdown.appendChild(option);
+
+        const div = document.createElement("div");
+        div.id = section.id;
+        div.className = "price-list";
+        div.innerHTML = `
+          <h3>${section.name}</h3>
+          <ul>
+            ${section.packages.map(pkg => `
+              <li>
+                <input type="checkbox" data-id="${pkg.id}" data-before="${pkg.priceBeforeTax}" data-after="${pkg.priceAfterTax}" data-name="${pkg.name}">
+                <strong>${pkg.name}</strong>
+                <span>Before VAT: ${pkg.priceBeforeTax} EGP</span>
+                <span>After VAT: ${pkg.priceAfterTax} EGP</span>
+              </li>
+            `).join('')}
+          </ul>
+          <div class="note">*Prices are estimates for 2025 and include 14% VAT where applicable. Verify with te.eg for exact rates.</div>
+        `;
+        priceLists.appendChild(div);
+      });
+      updateSelectedPackages();
+    }
+
+    // Update Selected Packages
+    function updateSelectedPackages() {
+      const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+      const selectedList = document.getElementById("selectedList");
+      selectedList.innerHTML = "";
+      let totalBeforeTax = 0;
+      let totalAfterTax = 0;
+      checkboxes.forEach(cb => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <strong>${cb.dataset.name}</strong>
+          <span>Before VAT: ${cb.dataset.before} EGP</span>
+          <span>After VAT: ${cb.dataset.after} EGP</span>
+          <button class="btn" onclick="removePackage('${cb.dataset.id}')"><i class="fas fa-trash"></i></button>
+        `;
+        selectedList.appendChild(li);
+        totalBeforeTax += parseFloat(cb.dataset.before);
+        totalAfterTax += parseFloat(cb.dataset.after);
+      });
+      const balance = parseFloat(document.getElementById("clientBalance").value) || 0;
+      const difference = totalBeforeTax - balance;
+      document.getElementById("totalBeforeTax").textContent = `الإجمالي قبل الضريبة: ${totalBeforeTax.toFixed(2)} EGP`;
+      document.getElementById("totalAfterTax").textContent = `الإجمالي بعد الضريبة: ${totalAfterTax.toFixed(2)} EGP`;
+      document.getElementById("remainingBalance").textContent = difference <= 0
+        ? `الرصيد المتبقي: ${Math.abs(difference).toFixed(2)} EGP`
+        : `المبلغ المستحق: ${(difference * 1.14).toFixed(2)} EGP`;
+    }
+
+    function removePackage(packageId) {
+      const checkbox = document.querySelector(`input[data-id="${packageId}"]`);
+      if (checkbox) {
+        checkbox.checked = false;
+        updateSelectedPackages();
+      }
+    }
+
+    // WE Prices Dropdown
+    document.getElementById("weCategory").addEventListener("change", () => {
+      const category = document.getElementById("weCategory").value;
+      document.querySelectorAll('.price-list').forEach(list => {
+        list.classList.remove('active');
+      });
+      if (category) {
+        document.getElementById(category).classList.add('active');
+      }
+    });
+
+    // Checkbox and Balance Events
+    document.getElementById("priceLists").addEventListener("change", updateSelectedPackages);
+    document.getElementById("clientBalance").addEventListener("input", updateSelectedPackages);
+
+    // Initialize
+    initData();
+  </script>
+</body>
+</html>
